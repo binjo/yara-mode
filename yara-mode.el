@@ -58,7 +58,7 @@ For detail, see `comment-dwim'."
 
 (defconst yara-font-lock-keywords
   (list
-   '("rule\\|strings\\|condition\\|meta\\|output" . font-lock-keyword-face))
+   '("\\<\\(?:all\\|and\\|any\\|ascii\\|at\\|condition\\|contains\\|entrypoint\\|false\\|filesize\\|fullword\\|for\\|global\\|in\\|include\\|index\\|indexes\\|int8\\|int16\\|int32\\|matches\\|meta\\|nocase\\|not\\|or\\|of\\|private\\|rule\\|rva\\|section\\|strings\\|them\\|true\\|uint8\\|uint16\\|uint32\\|wide\\|output\\)\\>" . font-lock-keyword-face))
   "Keywords to highlight in yara-mode.")
 
 (defvar yara-mode-syntax-table
