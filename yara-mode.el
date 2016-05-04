@@ -56,9 +56,16 @@ For detail, see `comment-dwim'."
         (comment-end ""))
     (comment-dwim arg)))
 
-(defconst yara-font-lock-keywords
-  (list
-   '("\\<\\(?:all\\|and\\|any\\|ascii\\|at\\|condition\\|contains\\|entrypoint\\|false\\|filesize\\|fullword\\|for\\|global\\|in\\|include\\|index\\|indexes\\|int8\\|int16\\|int32\\|matches\\|meta\\|nocase\\|not\\|or\\|of\\|private\\|rule\\|rva\\|section\\|strings\\|them\\|true\\|uint8\\|uint16\\|uint32\\|wide\\|output\\)\\>" . font-lock-keyword-face))
+(defvar yara-font-lock-keywords
+  `((,(regexp-opt
+       '("all" "and" "any" "ascii" "at" "condition" "contains"
+         "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
+         "import" "include" "int8" "int16" "int32" "int8be" "int16be"
+         "int32be" "matches" "meta" "nocase" "not" "or" "of"
+         "private" "rule" "strings" "them" "true" "uint8" "uint16"
+         "uint32" "uint8be" "uint16be" "uint32be" "wide")
+       'symbols)
+     . font-lock-keyword-face))
   "Keywords to highlight in yara-mode.")
 
 (defvar yara-mode-syntax-table
@@ -73,7 +80,7 @@ For detail, see `comment-dwim'."
   "Syntax table for yara-mode.")
 
 ;;;###autoload
-(define-derived-mode yara-mode c++-mode "Yara"
+(define-derived-mode yara-mode prog-mode "Yara"
   "Major Mode for editing yara rule files."
   (kill-all-local-variables)
   (use-local-map yara-mode-map)
