@@ -46,6 +46,7 @@
     yara-mode-map)
   "Keymap for YARA major mode.")
 
+;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.ya?r" . yara-mode))
 
 (defun yara-comment-dwim (arg)
