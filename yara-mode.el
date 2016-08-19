@@ -6,6 +6,7 @@
 ;; Version: $Id: yara-mode.el,v 0.0 2012/10/16 14:11:51 binjo Exp $
 ;; Keywords: yara
 ;; X-URL: not distributed yet
+;; Package-Requires: ((emacs "24"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
