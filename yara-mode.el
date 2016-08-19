@@ -84,7 +84,7 @@ For detail, see `comment-dwim'."
 (define-derived-mode yara-mode prog-mode "Yara"
   "Major Mode for editing yara rule files."
   (set (make-local-variable 'font-lock-defaults) '(yara-font-lock-keywords nil t))
-  (set (make-local-variable 'default-tab-width) 4)
+  (set (make-local-variable 'tab-width) 4)
   (define-key yara-mode-map [remap comment-dwim] 'yara-comment-dwim))
 
 (provide 'yara-mode)
