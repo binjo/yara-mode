@@ -6,6 +6,7 @@
 ;; Version: $Id: yara-mode.el,v 0.0 2012/10/16 14:11:51 binjo Exp $
 ;; Keywords: yara
 ;; X-URL: not distributed yet
+;; Package-Requires: ((emacs "24"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -45,6 +46,7 @@
     yara-mode-map)
   "Keymap for YARA major mode.")
 
+;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.ya?r" . yara-mode))
 
 (defun yara-comment-dwim (arg)
@@ -82,15 +84,9 @@ For detail, see `comment-dwim'."
 ;;;###autoload
 (define-derived-mode yara-mode prog-mode "Yara"
   "Major Mode for editing yara rule files."
-  (kill-all-local-variables)
-  (use-local-map yara-mode-map)
-  (set-syntax-table yara-mode-syntax-table)
   (set (make-local-variable 'font-lock-defaults) '(yara-font-lock-keywords nil t))
-  (set (make-local-variable 'default-tab-width) 4)
-  (setq major-mode 'yara-mode)
-  (setq mode-name "Yara")
-  (define-key yara-mode-map [remap comment-dwim] 'yara-comment-dwim)
-  (run-hooks 'yara-mode-hook))
+  (set (make-local-variable 'tab-width) 4)
+  (define-key yara-mode-map [remap comment-dwim] 'yara-comment-dwim))
 
 (provide 'yara-mode)
 
