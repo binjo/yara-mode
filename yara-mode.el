@@ -62,12 +62,17 @@ For detail, see `comment-dwim'."
   `((,(regexp-opt
        '("all" "and" "any" "ascii" "at" "condition" "contains"
          "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
-         "import" "include" "int8" "int16" "int32" "int8be" "int16be"
-         "int32be" "matches" "meta" "nocase" "not" "or" "of"
-         "private" "rule" "strings" "them" "true" "uint8" "uint16"
-         "uint32" "uint8be" "uint16be" "uint32be" "wide")
+         "import" "include"
+         "matches" "meta" "nocase" "not" "or" "of"
+         "private" "rule" "strings" "them" "true"
+         "wide")
        'symbols)
-     . font-lock-keyword-face))
+     . font-lock-keyword-face)
+    (,(regexp-opt
+       '("int8" "int16" "int32" "int8be" "int16be" "int32be"
+         "uint8" "uint16" "uint32" "uint8be" "uint16be" "uint32be")
+       'symbols)
+     . font-lock-function-name-face))
   "Keywords to highlight in yara-mode.")
 
 (defvar yara-mode-syntax-table
