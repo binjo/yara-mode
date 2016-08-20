@@ -1,4 +1,4 @@
-;;; yara-mode.el ---
+;;; yara-mode.el --- Major mode for editing yara rule file
 
 ;; Copyright 2012 Binjo
 ;;
@@ -29,6 +29,7 @@
 ;;; History:
 
 ;; 2012/10/16, init
+;; 2016/08/19, 1st pull request from @syohex
 
 ;; Put this file into your load-path and the following into your ~/.emacs:
 ;;   (require 'yara-mode)
