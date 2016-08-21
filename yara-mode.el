@@ -42,9 +42,7 @@
 
 (defvar yara-mode-hook nil)
 (defvar yara-mode-map
-  (let ((yara-mode-map (make-keymap)))
-    (define-key yara-mode-map "\C-j" 'newline-and-indent)
-    yara-mode-map)
+  (make-keymap)
   "Keymap for YARA major mode.")
 
 ;;;###autoload
@@ -90,9 +88,9 @@ For detail, see `comment-dwim'."
 ;;;###autoload
 (define-derived-mode yara-mode prog-mode "Yara"
   "Major Mode for editing yara rule files."
-  (set (make-local-variable 'font-lock-defaults) '(yara-font-lock-keywords nil t))
-  (set (make-local-variable 'tab-width) 4)
-  (define-key yara-mode-map [remap comment-dwim] 'yara-comment-dwim))
+  (define-key yara-mode-map [remap comment-dwim] 'yara-comment-dwim)
+  (setq font-lock-defaults '(yara-font-lock-keywords nil t))
+  (setq tab-width 4))
 
 (provide 'yara-mode)
 
