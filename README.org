@@ -1,5 +1,7 @@
 * yara-mode
 
+[[http://melpa.org/#/yara-mode][file:http://melpa.org/packages/yara-mode-badge.svg]]
+
 yara mode for GNU Emacs to edit yara related files.
 
 (require 'yara-mode)
