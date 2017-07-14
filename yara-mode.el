@@ -54,6 +54,7 @@ For detail, see `comment-dwim'."
   (interactive "*P")
   (require 'newcomment)
   (let ((comment-start "//")
+        (comment-start-skip "//")
         (comment-end ""))
     (comment-dwim arg)))
 
