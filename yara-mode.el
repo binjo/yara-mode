@@ -59,7 +59,13 @@ For detail, see `comment-dwim'."
     (comment-dwim arg)))
 
 (defvar yara-font-lock-keywords
-  `((,(regexp-opt
+  `(("^[\s\t]*rule[\s\t]+\\([^\\$\s\t].*\\)"
+     . (1 font-lock-warning-face))
+    ("^[\s\t]+\\([^\\$\s\t].*?\\)[\s\t]*=[\s\t]*"
+     . (1 font-lock-constant-face))
+    ("\\_<\\(\\$[^\s\t].*?\\)\\_>"
+     . (1 font-lock-variable-name-face))
+    (,(regexp-opt
        '("all" "and" "any" "ascii" "at" "condition" "contains"
          "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
          "import" "include"
