@@ -65,13 +65,15 @@ For detail, see `comment-dwim'."
      . (1 font-lock-constant-face))
     ("\\_<\\(\\$[^\s\t].*?\\)\\_>"
      . (1 font-lock-variable-name-face))
+    ("\\_<\\(/\\(.*?\\)/\\)\\_>"
+     . (1 font-lock-string-face))
     (,(regexp-opt
        '("all" "and" "any" "ascii" "at" "condition" "contains"
          "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
          "import" "include"
          "matches" "meta" "nocase" "not" "or" "of"
          "private" "rule" "strings" "them" "true"
-         "wide")
+         "wide" "xor")
        'symbols)
      . font-lock-keyword-face)
     (,(regexp-opt
