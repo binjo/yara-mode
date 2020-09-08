@@ -68,7 +68,7 @@ For detail, see `comment-dwim'."
     ("\\_<\\(/\\(.*?\\)/\\)\\_>"
      . (1 font-lock-string-face))
     (,(regexp-opt
-       '("all" "and" "any" "ascii" "at" "condition" "contains"
+       '("all" "and" "any" "ascii" "at" "base64" "base64wide" "condition" "contains"
          "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
          "import" "include"
          "matches" "meta" "nocase" "not" "or" "of"
