@@ -36,8 +36,7 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl))
+(require 'cc-langs)
 
 
 (defvar yara-mode-hook nil)
@@ -50,7 +49,7 @@
 
 (defun yara-comment-dwim (arg)
   "Comment or uncomment current line or region in a smart way.
-For detail, see `comment-dwim'."
+For ARG detail, see `comment-dwim'."
   (interactive "*P")
   (require 'newcomment)
   (let ((comment-start "//")
@@ -84,14 +83,7 @@ For detail, see `comment-dwim'."
   "Keywords to highlight in yara-mode.")
 
 (defvar yara-mode-syntax-table
-  (let ((yara-mode-syntax-table (make-syntax-table)))
-
-    ;; Comment style /* ... */
-    (modify-syntax-entry ?/ ". 14" yara-mode-syntax-table)
-    (modify-syntax-entry ?* ". 23" yara-mode-syntax-table)
-    (modify-syntax-entry ?\n ">" yara-mode-syntax-table)
-
-    yara-mode-syntax-table)
+  (funcall (c-lang-const c-make-mode-syntax-table c))
   "Syntax table for yara-mode.")
 
 ;;;###autoload
