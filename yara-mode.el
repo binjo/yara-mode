@@ -58,20 +58,26 @@ For ARG detail, see `comment-dwim'."
     (comment-dwim arg)))
 
 (defvar yara-font-lock-keywords
-  `(("^[\s\t]*rule[\s\t]+\\([^\\$\s\t].*\\)"
-     . (1 font-lock-warning-face))
+  `(("^\\_<rule[\s\t]+\\([^\\$\s\t].*\\)\\_>"
+     . (1 font-lock-function-name-face))
     ("^[\s\t]+\\([^\\$\s\t].*?\\)[\s\t]*=[\s\t]*"
      . (1 font-lock-constant-face))
     ("\\_<\\(\\$[^\s\t].*?\\)\\_>"
      . (1 font-lock-variable-name-face))
-    ("\\_<\\(/\\(.*?\\)/\\)\\_>"
+    ("\\([{/].*[}/]\\)"
      . (1 font-lock-string-face))
+    ("\\<\\(0x[[:xdigit:]]*\\)\\>"
+     . (1 font-lock-constant-face))
     (,(regexp-opt
-       '("all" "and" "any" "ascii" "at" "base64" "base64wide" "condition" "contains"
+       '("condition" "meta" "strings")
+       'symbols)
+     . font-lock-warning-face)
+    (,(regexp-opt
+       '("all" "and" "any" "ascii" "at" "base64" "base64wide" "contains"
          "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
          "import" "include"
-         "matches" "meta" "nocase" "not" "or" "of"
-         "private" "rule" "strings" "them" "true"
+         "matches" "nocase" "not" "or" "of"
+         "private" "rule" "them" "true"
          "wide" "xor")
        'symbols)
      . font-lock-keyword-face)
