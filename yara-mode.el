@@ -73,12 +73,13 @@ For ARG detail, see `comment-dwim'."
        'symbols)
      . font-lock-warning-face)
     (,(regexp-opt
-       '("all" "and" "any" "ascii" "at" "base64" "base64wide" "contains"
+       '("all" "and" "any" "ascii" "at" "base64" "base64wide" "contains" "icontains"
          "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
          "import" "include"
          "matches" "nocase" "not" "or" "of"
          "private" "rule" "them" "true"
-         "wide" "xor")
+         "wide" "xor"
+         "startswith" "istartswith" "endswith" "iendswith")
        'symbols)
      . font-lock-keyword-face)
     (,(regexp-opt
