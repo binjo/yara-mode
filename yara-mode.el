@@ -36,6 +36,7 @@
 
 ;;; Code:
 
+(require 'smie)
 (require 'cc-langs)
 
 
@@ -43,6 +44,21 @@
 (defvar yara-mode-map
   (make-keymap)
   "Keymap for YARA major mode.")
+
+(defgroup yara-mode nil
+  "Support for Yara code.")
+
+(defcustom yara-indent-offset 4
+  "Indent Yara code by this number of spaces."
+  :type 'integer
+  :group 'yara-mode
+  :safe #'integerp)
+
+(defcustom yara-indent-section 4
+  "Indent the sections of rule in Yara code by this number of spaces."
+  :type 'integer
+  :group 'yara-mode
+  :safe #'integerp)
 
 ;;;###autoload
 (add-to-list 'auto-mode-alist '("\\.ya?r" . yara-mode))
@@ -56,6 +72,44 @@ For ARG detail, see `comment-dwim'."
         (comment-start-skip "//")
         (comment-end ""))
     (comment-dwim arg)))
+
+(defvar yara-smie-grammar nil
+  "Yara BNF grammer only for indentation with `smie'.")
+
+(setq yara-smie-grammar
+      (smie-prec2->grammar
+       (smie-bnf->prec2
+        `((stmts (stmts "import" modulepath)
+                 (stmts "include" filepath)
+                 (stmts "rule" rulename "{" sections "}")
+                 (stmts "rule" rulename ":" tags "{" sections "}"))
+          (sections (sections "strings" ":" stringdefs)
+                    (sections "condition" ":" condexpr)
+                    (sections "meta" ":" metalist))
+          (modulepath)
+          (filepath)
+          (rulename)
+          (tags)
+          (stringdefs)
+          (condexpr)
+          (metalist)))))
+
+(defun yara-smie-rules (kind token)
+  "Perform indentation of KIND on TOKEN using the `smie' engine."
+  (let ((offset (pcase (cons kind token)
+                  ('(:elem . arg) 0)
+                  ('(:elem . basic) yara-indent-offset)
+                  ('(:before . "{") (smie-rule-parent))
+                  ('(:after . "}") 0)
+                  ;; indentation of sections inner rule block
+                  ('(:list-intro . ":") (not (smie-rule-prev-p "condition")))
+                  (`(:before . ,(or "condition" "strings" "meta"))
+                   (smie-rule-parent yara-indent-section))
+                  ('(:after . ":")
+                   (when (smie-rule-prev-p "condition" "strings" "meta")
+                     yara-indent-offset)))))
+    offset
+    ))
 
 (defvar yara-font-lock-keywords
   `(("^\\_<rule[\s\t]+\\([^\\$\s\t].*\\)\\_>"
@@ -97,6 +151,10 @@ For ARG detail, see `comment-dwim'."
 (define-derived-mode yara-mode prog-mode "Yara"
   "Major Mode for editing yara rule files."
   (define-key yara-mode-map [remap comment-dwim] 'yara-comment-dwim)
+  (setq comment-start "//"
+        comment-start-skip "//"
+        comment-end "")
+  (smie-setup yara-smie-grammar #'yara-smie-rules)
   (setq font-lock-defaults '(yara-font-lock-keywords nil t))
   (setq tab-width 4))
 
