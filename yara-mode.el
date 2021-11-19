@@ -48,7 +48,7 @@
 (defgroup yara-mode nil
   "Support for Yara code.")
 
-(defcustom yara-indent-offset 4
+(defcustom yara-indent-offset 6
   "Indent Yara code by this number of spaces."
   :type 'integer
   :group 'yara-mode
@@ -79,37 +79,105 @@ For ARG detail, see `comment-dwim'."
 (setq yara-smie-grammar
       (smie-prec2->grammar
        (smie-bnf->prec2
-        `((stmts (stmts "import" modulepath)
-                 (stmts "include" filepath)
-                 (stmts "rule" rulename "{" sections "}")
-                 (stmts "rule" rulename ":" tags "{" sections "}"))
-          (sections (sections "strings" ":" stringdefs)
-                    (sections "condition" ":" condexpr)
-                    (sections "meta" ":" metalist))
+        `(
+          (stmt ("import" modulepath)
+                ("include" filepath)
+                ("rule" rulename "{" sections "}")
+                ("rule" rulename ":" tags "{" sections "}"))
+          (stmts (stmts ";" stmts) (stmt))
+          (sections (sections "strings" "::" stringdefs)
+                    (sections "condition" "::" condexpr)
+                    (sections "meta" "::" metalist))
           (modulepath)
           (filepath)
           (rulename)
           (tags)
-          (stringdefs)
-          (condexpr)
-          (metalist)))))
+          (stringdefs (stringdefs ";" stringdefs) (stringdef))
+          (stringdef (var "=" def))
+          (var)
+          (def)
+          (condexpr (condexpr "and" condexpr)
+                    (condexpr "or" condexpr)
+                    ("(" condexpr ")")
+                    ("for" qualvar "in" set ":" condexpr))
+          (qualvar)
+          (set)
+          (metalist))
+        '((assoc "::") (assoc ";"))
+        '((assoc "and") (assoc "or") (assoc ":"))
+        '((assoc "rule") (assoc "{") (assoc ":"))
+        )))
 
 (defun yara-smie-rules (kind token)
   "Perform indentation of KIND on TOKEN using the `smie' engine."
   (let ((offset (pcase (cons kind token)
                   ('(:elem . arg) 0)
                   ('(:elem . basic) yara-indent-offset)
-                  ('(:before . "{") (smie-rule-parent))
-                  ('(:after . "}") 0)
+                  (`(:before . ,(or "{" "("))
+                   (cond
+                    ((smie-rule-parent-p "rule" ":")
+                     (smie-rule-parent (- yara-indent-offset)))
+                    (t (smie-rule-parent))
+                    ))
+                  ('(:after . "=") yara-indent-offset)
+                  ;; (`(:after . ,(or "}" ")")) 0)
+                  (`(:before . ":")
+                   (cond
+                    ((smie-rule-parent-p "rule" "for")
+                     (smie-rule-separator kind))))
                   ;; indentation of sections inner rule block
-                  ('(:list-intro . ":") (not (smie-rule-prev-p "condition")))
+                  ('(:list-intro . ":") t)
+                  ;; ('(:list-intro . "::") (not (smie-rule-prev-p "condition")))
                   (`(:before . ,(or "condition" "strings" "meta"))
                    (smie-rule-parent yara-indent-section))
-                  ('(:after . ":")
+                  ('(:after . "::")
                    (when (smie-rule-prev-p "condition" "strings" "meta")
                      yara-indent-offset)))))
+    (message "%s %s -> %s" kind token offset)
     offset
     ))
+
+(defun yara-smie-forward-token ()
+  (let ((token
+         (cond
+          ((yara-smie--looking-at-stmt-end)
+           (progn (forward-comment (point-max))
+                  ";"))
+          ((yara-smie--looking-at-sec-header-end t)
+           (progn (smie-default-forward-token)
+                  "::"))
+          (t (smie-default-forward-token)))))
+    (message "    >> %s" token)
+    token))
+
+(defun yara-smie-backward-token ()
+  (let ((token
+         (cond
+          ((and (not (yara-smie--looking-at-stmt-end))
+                (progn (forward-comment (- (point)))
+                       (yara-smie--looking-at-stmt-end)))
+           ";")
+          ((progn (forward-comment (- (point)))
+                  (yara-smie--looking-at-sec-header-end nil))
+           (progn (smie-default-backward-token)
+                  "::"))
+          (t (smie-default-backward-token)))))
+    (message "        << %s" token)
+    token))
+
+(defun yara-smie--looking-at-stmt-end ()
+  (or (looking-back "}" (- (point) 1))
+      (and (looking-back "\"")
+           (let ((line (buffer-substring-no-properties (point) (line-beginning-position))))
+             (string-match-p "^\\(import\\|include\\)[\s\t]+\".*\"" line))
+           )))
+
+(defun yara-smie--looking-at-sec-header-end (is-forward)
+  (if is-forward
+      (and (looking-at ":")
+           (looking-back "\\(strings\\|condition\\|meta\\)") (- (point) 9))
+    (and (looking-back ":")
+         (looking-back "\\(strings\\|condition\\|meta\\):") (- (point) 10))))
 
 (defvar yara-font-lock-keywords
   `(("^\\_<rule[\s\t]+\\([^\\$\s\t].*\\)\\_>"
@@ -154,7 +222,9 @@ For ARG detail, see `comment-dwim'."
   (setq comment-start "//"
         comment-start-skip "//"
         comment-end "")
-  (smie-setup yara-smie-grammar #'yara-smie-rules)
+  (smie-setup yara-smie-grammar #'yara-smie-rules
+              :forward-token #'yara-smie-forward-token
+              :backward-token #'yara-smie-backward-token)
   (setq font-lock-defaults '(yara-font-lock-keywords nil t))
   (setq tab-width 4))
 
