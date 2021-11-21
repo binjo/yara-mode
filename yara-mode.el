@@ -48,13 +48,13 @@
 (defgroup yara-mode nil
   "Support for Yara code.")
 
-(defcustom yara-indent-offset 6
+(defcustom yara-indent-offset 4
   "Indent Yara code by this number of spaces."
   :type 'integer
   :group 'yara-mode
   :safe #'integerp)
 
-(defcustom yara-indent-section 4
+(defcustom yara-indent-section 2
   "Indent the sections of rule in Yara code by this number of spaces."
   :type 'integer
   :group 'yara-mode
@@ -79,34 +79,35 @@ For ARG detail, see `comment-dwim'."
 (setq yara-smie-grammar
       (smie-prec2->grammar
        (smie-bnf->prec2
-        `(
-          (stmt ("import" modulepath)
+        `((stmt ("import" modulepath)
                 ("include" filepath)
-                ("rule" rulename "{" sections "}")
-                ("rule" rulename ":" tags "{" sections "}"))
+                ("rule" id "{" sections "}")
+                ("rule" id ":#" tags "{" sections "}"))
+          (tags (tags "," tags) (id))
           (stmts (stmts ";" stmts) (stmt))
           (sections (sections "meta" "::" metalist)
                     (sections "strings" "::" stringdefs)
                     (sections "condition" "::" condexpr))
           (metalist)
           (stringdefs (stringdefs ";" stringdefs) (stringdef))
-          (stringdef (var "=" def)
-                     (var "=" "{" ":::" bytes "}"))
+          (stringdef ($id "=" def)
+                     ($id "=" "{" ":::" bytes "}"))
           (condexpr (condexpr "and" condexpr)
                     (condexpr "or" condexpr)
                     ("(" condexpr ")")
                     ("for" qualvar "in" set ":" condexpr))
           (modulepath)
           (filepath)
-          (rulename)
-          (tags)
-          (var)
+          (id)
+          ($id)
           (def)
           (bytes)
           (qualvar)
           (set))
+        '((assoc "rule"))
         '((assoc "="))
         '((assoc "::") (assoc ";"))
+        '((assoc ":#") (assoc ","))
         '((assoc "and") (assoc "or") (assoc ":")))))
 
 (defun yara-smie-rules (kind token)
@@ -115,23 +116,22 @@ For ARG detail, see `comment-dwim'."
                   ('(:elem . args) 0)
                   ('(:elem . basic) yara-indent-offset)
                   (`(:before . ,(or "{" "("))
-                   (cond ((smie-rule-parent-p "rule" ":")
+                   (cond ((smie-rule-parent-p "rule" ":" ":#")
                           (smie-rule-parent (- yara-indent-offset)))
                          (t (smie-rule-parent))))
-                  ('(:after . "=") yara-indent-offset)
-                  ('(:after . ":::") (smie-rule-parent yara-indent-offset))
-                  (`(:before . ":")
+                  (`(:before . ,(or ":" ":#"))
                    (cond ((smie-rule-parent-p "rule" "for")
                           (smie-rule-separator kind))))
-                  ;; indentation of sections inner rule block
-                  ('(:list-intro . ":") t)
-                  ('(:list-intro . "::") t)
-                  ('(:list-intro . ":::") t)
                   (`(:before . ,(or "condition" "strings" "meta"))
                    (smie-rule-parent yara-indent-section))
-                  ('(:after . "::")
-                   (when (smie-rule-prev-p "condition" "strings" "meta")
-                     yara-indent-offset)))))
+                  ('(:after . "=") yara-indent-offset)
+                  ('(:after . ":::") (smie-rule-parent yara-indent-offset))
+                  ('(:after . "::") yara-indent-offset)
+                  (`(,_ . ";") (smie-rule-separator kind))
+                  ('(:list-intro . ":") t)
+                  ('(:list-intro . "::") t)
+                  ('(:list-intro . ":#") t)
+                  ('(:list-intro . ":::") t))))
     ;; (message "%s '%s' -> %s" kind token offset)
     offset
     ))
@@ -141,10 +141,15 @@ For ARG detail, see `comment-dwim'."
          (cond
           ((yara-smie--looking-at-stmt-end)
            (progn (forward-comment (point-max))
-                  ";"))
+                  (if (yara-smie--looking-inner-rule-tags)
+                      ","
+                    ";")))
           ((yara-smie--looking-at-bytes-block-begin)
            (progn (forward-comment (point-max))
                   ":::"))
+          ((yara-smie--looking-at-rule-tags-begin t)
+           (progn (smie-default-forward-token)
+                  ":#"))
           ((yara-smie--looking-at-sec-label-end t)
            (progn (smie-default-forward-token)
                   "::"))
@@ -160,13 +165,19 @@ For ARG detail, see `comment-dwim'."
                   (forward-comment (- (point)))
                   (yara-smie--looking-at-stmt-end)))
            (forward-comment (- (point)))
-           ";")
+           (if (yara-smie--looking-inner-rule-tags)
+               ","
+             ";"))
           ((and (not (yara-smie--looking-at-bytes-block-begin))
                 (save-excursion
                   (forward-comment (- (point)))
                   (yara-smie--looking-at-bytes-block-begin)))
            (forward-comment (- (point)))
            ":::")
+          ((progn (forward-comment (- (point)))
+                  (yara-smie--looking-at-rule-tags-begin nil))
+           (smie-default-backward-token)
+           ":#")
           ((progn (forward-comment (- (point)))
                   (yara-smie--looking-at-sec-label-end nil))
            (smie-default-backward-token)
@@ -175,19 +186,27 @@ For ARG detail, see `comment-dwim'."
     ;; (message "        << %s" token)
     token))
 
+(defconst yara-smie-operator
+  (rx (or (or "+" "-" "=" ":" "{" "(" ",")
+          (: (or "and" "or" "not" "in" "of")
+             symbol-end))))
+
+(defconst yara-smie-end-operator
+  (rx (or (or "+" "-" "=" ":" "{" "(" ",")
+          (: symbol-start
+             (or "and" "or" "not" "in" "of"))
+          (: symbol-start
+             (or "rule" "import" "include" "for")))))
+
 (defun yara-smie--looking-at-stmt-end ()
-  (or (looking-back "}" (- (point) 1))
-      (and (looking-back "\"" (- (point) 1))
-           (let ((line (buffer-substring-no-properties
-                        (point) (line-beginning-position))))
-             (or (string-match-p "^\\(import\\|include\\)[\s\t]+\".*\"" line))))
-      (and (looking-at "[\s\t]*$")
-           (looking-back "[^:]" (- (point) 1))
-           (save-excursion
-             (forward-comment (point-max))
-             (skip-syntax-forward "w_'")
-             (forward-comment (point-max))
-             (looking-at "=[^=]")))))
+  (and (not (save-excursion
+              (beginning-of-line)
+              (looking-at-p "\\s-*$")))
+       (looking-at-p "\\s-*$")
+       (not (looking-back yara-smie-end-operator (- (point) 8)))
+       (save-excursion
+         (forward-comment (point-max))
+         (not (looking-at-p yara-smie-operator)))))
 
 (defun yara-smie--looking-at-bytes-block-begin ()
   (and (looking-back "{" (- (point) 1))
@@ -197,11 +216,29 @@ For ARG detail, see `comment-dwim'."
          (looking-back "[^=]=" (- (point) 2)))))
 
 (defun yara-smie--looking-at-sec-label-end (is-forward)
-  (if is-forward
-      (and (looking-at ":")
-           (looking-back "\\(strings\\|condition\\|meta\\)") (- (point) 9))
-    (and (looking-back ":")
-         (looking-back "\\(strings\\|condition\\|meta\\):") (- (point) 10))))
+  (and (if is-forward
+           (looking-at ":")
+         (looking-back ":" (- (point) 1)))
+       (save-excursion
+         (unless is-forward (backward-char))
+         (looking-back "\\(strings\\|condition\\|meta\\)" (- (point) 9)))))
+
+(defun yara-smie--looking-at-rule-tags-begin (is-forward)
+  (and (if is-forward
+           (looking-at ":")
+         (looking-back ":" (- (point) 1)))
+       (save-excursion
+         (unless is-forward (backward-char))
+         (forward-comment (- (point)))
+         (skip-syntax-backward "w_'")
+         (forward-comment (- (point)))
+         (looking-back "rule" (- (point) 4)))))
+
+(defun yara-smie--looking-inner-rule-tags ()
+  (save-excursion
+    (while (progn (forward-comment (- (point)))
+                  (not (= (skip-syntax-backward "w_ ") 0))))
+    (yara-smie--looking-at-rule-tags-begin nil)))
 
 (defvar yara-font-lock-keywords
   `(("^\\_<rule[\s\t]+\\([^\\$\s\t].*\\)\\_>"
