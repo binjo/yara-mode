@@ -83,8 +83,8 @@ For ARG detail, see `comment-dwim'."
           (stmt ("import" modulepath)
                 ("include" filepath)
                 ("rule" ruledecl "{" sections "}"))
-          (ruledecl ("(#" id "#)")
-                    ("(#" id ":#" tags "#)"))
+          (ruledecl (id)
+                    (id ":#" tags "#:"))
           (tags (tags "," tags) (id))
           (sections (sections "meta" ":*" metalist)
                     (sections "strings" ":*" stringdefs)
@@ -116,6 +116,7 @@ For ARG detail, see `comment-dwim'."
   (let ((offset (pcase (cons kind token)
                   ('(:elem . args) 0)
                   ('(:elem . basic) yara-indent-offset)
+                  ('(:before . "#:") (smie-rule-parent))
                   (`(:before . ,(or "{" "("))
                    (cond ((smie-rule-parent-p ":" ":#")
                           (smie-rule-parent (- yara-indent-offset)))
@@ -145,9 +146,6 @@ For ARG detail, see `comment-dwim'."
                   (if (yara-smie--looking-inner-rule-tags)
                       ","
                     ";")))
-          ((yara-smie--looking-at-rule-decl-begin)
-           (progn (foward-comment (point-max))
-                  "(#"))
           ((yara-smie--looking-at-bytes-block-begin)
            (progn (forward-comment (point-max))
                   ":."))
@@ -158,7 +156,7 @@ For ARG detail, see `comment-dwim'."
            (progn (smie-default-forward-token)
                   ":*"))
           (t (smie-default-forward-token)))))
-    ;; (message "    >> %s" token)
+    (message "    >> %s" token)
     token))
 
 (defun yara-smie-backward-token ()
@@ -172,12 +170,16 @@ For ARG detail, see `comment-dwim'."
            (if (yara-smie--looking-inner-rule-tags)
                ","
              ";"))
-          ((and (not (yara-smie--looking-at-rule-decl-begin))
+          ((and (not (yara-smie--looking-at-rule-decl-end))
                 (save-excursion
                   (forward-comment (- (point)))
-                  (yara-smie--looking-at-rule-decl-begin)))
+                  (yara-smie--looking-at-rule-decl-end)))
            (forward-comment (- (point)))
-           "(#")
+           "#:")
+          ((progn (forward-comment (- (point)))
+                  (yara-smie--looking-at-rule-tags-begin nil))
+           (smie-default-backward-token)
+           ":#")
           ((and (not (yara-smie--looking-at-bytes-block-begin))
                 (save-excursion
                   (forward-comment (- (point)))
@@ -185,15 +187,11 @@ For ARG detail, see `comment-dwim'."
            (forward-comment (- (point)))
            ":.")
           ((progn (forward-comment (- (point)))
-                  (yara-smie--looking-at-rule-tags-begin nil))
-           (smie-default-backward-token)
-           ":#")
-          ((progn (forward-comment (- (point)))
                   (yara-smie--looking-at-sec-label-end nil))
            (smie-default-backward-token)
            ":*")
           (t (smie-default-backward-token)))))
-    ;; (message "        << %s" token)
+    (message "        << %s" token)
     token))
 
 (defconst yara-smie--re-symbol-operator
@@ -245,24 +243,45 @@ For ARG detail, see `comment-dwim'."
          (unless is-forward (backward-char))
          (looking-back "\\(strings\\|condition\\|meta\\)" (- (point) 9)))))
 
+(defun yara-smie--looking-at-rule-decl-begin ()
+  (and (looking-back "\\_<rule" (- (point) 5))))
+
+(defun yara-smie--looking-at-rule-decl-end ()
+  (and (looking-back "[[:alnum:]_]" (- (point) 1))
+       (save-excursion
+         (forward-comment (point-max))
+         (looking-at-p "{"))
+       (or (yara-smie--looking-at-rule-id-end)
+           (save-excursion
+             (yara-smie--skip-tags-backward)
+             (yara-smie--looking-at-rule-tags-begin t)))))
+
 (defun yara-smie--looking-at-rule-tags-begin (is-forward)
   (and (if is-forward
-           (looking-at ":")
+           (looking-at-p ":")
          (looking-back ":" (- (point) 1)))
        (save-excursion
          (unless is-forward (backward-char))
-         (forward-comment (- (point)))
-         (skip-syntax-backward "w_")
-         (forward-comment (- (point)))
-         (looking-back "rule" (- (point) 4)))))
+         (yara-smie--looking-at-rule-id-end))))
+
+(defun yara-smie--looking-at-rule-id-end ()
+  (save-excursion
+    (forward-comment (- (point)))
+    (skip-syntax-backward "w_")
+    (forward-comment (- (point)))
+    (looking-back "\\_<rule" (- (point) 5))))
 
 (defun yara-smie--looking-inner-rule-tags ()
   (save-excursion
     (and (progn (forward-comment (point-max))
                 (looking-at-p "[[:alpha:]_]"))
-         (progn (while (progn (forward-comment (- (point)))
-                              (not (= (skip-syntax-backward "w_ ") 0))))
-                (yara-smie--looking-at-rule-tags-begin nil)))))
+         (progn (yara-smie--skip-tags-backward)
+                (yara-smie--looking-at-rule-tags-begin t)))))
+
+(defun yara-smie--skip-tags-backward ()
+  (while (progn (forward-comment (- (point)))
+                (not (= (skip-syntax-backward "w_ ") 0))))
+  (backward-char))
 
 (defvar yara-font-lock-keywords
   `(("^\\_<rule[\s\t]+\\([^\\$\s\t].*\\)\\_>"
