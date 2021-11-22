@@ -79,12 +79,13 @@ For ARG detail, see `comment-dwim'."
 (setq yara-smie-grammar
       (smie-prec2->grammar
        (smie-bnf->prec2
-        `((stmt ("import" modulepath)
+        `((stmts (stmts ";" stmts) (stmt))
+          (stmt ("import" modulepath)
                 ("include" filepath)
-                ("rule" id "{" sections "}")
-                ("rule" id ":#" tags "{" sections "}"))
+                ("rule" ruledecl "{" sections "}"))
+          (ruledecl ("(#" id "#)")
+                    ("(#" id ":#" tags "#)"))
           (tags (tags "," tags) (id))
-          (stmts (stmts ";" stmts) (stmt))
           (sections (sections "meta" ":*" metalist)
                     (sections "strings" ":*" stringdefs)
                     (sections "condition" ":*" condexpr))
@@ -116,7 +117,7 @@ For ARG detail, see `comment-dwim'."
                   ('(:elem . args) 0)
                   ('(:elem . basic) yara-indent-offset)
                   (`(:before . ,(or "{" "("))
-                   (cond ((smie-rule-parent-p "rule" ":" ":#")
+                   (cond ((smie-rule-parent-p ":" ":#")
                           (smie-rule-parent (- yara-indent-offset)))
                          (t (smie-rule-parent))))
                   (`(:before . ,(or ":" ":#"))
@@ -132,7 +133,7 @@ For ARG detail, see `comment-dwim'."
                   ('(:list-intro . ":*") t)
                   ('(:list-intro . ":#") t)
                   ('(:list-intro . ":.") t))))
-    ;; (message "%s '%s' -> %s" kind token offset)
+    (message "%s '%s' -> %s" kind token offset)
     offset
     ))
 
@@ -144,6 +145,9 @@ For ARG detail, see `comment-dwim'."
                   (if (yara-smie--looking-inner-rule-tags)
                       ","
                     ";")))
+          ((yara-smie--looking-at-rule-decl-begin)
+           (progn (foward-comment (point-max))
+                  "(#"))
           ((yara-smie--looking-at-bytes-block-begin)
            (progn (forward-comment (point-max))
                   ":."))
@@ -168,6 +172,12 @@ For ARG detail, see `comment-dwim'."
            (if (yara-smie--looking-inner-rule-tags)
                ","
              ";"))
+          ((and (not (yara-smie--looking-at-rule-decl-begin))
+                (save-excursion
+                  (forward-comment (- (point)))
+                  (yara-smie--looking-at-rule-decl-begin)))
+           (forward-comment (- (point)))
+           "(#")
           ((and (not (yara-smie--looking-at-bytes-block-begin))
                 (save-excursion
                   (forward-comment (- (point)))
