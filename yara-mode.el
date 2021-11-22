@@ -144,7 +144,7 @@ For ARG detail, see `comment-dwim'."
               'yara-smie--looking-at-stmt-end
               'append ";")
              (yara-smie--forward-token-when
-              'yara-smie--looking-at-rule-decl-end
+              'yara-smie--looking-at-rule-tags-end
               'append "#:")
              (yara-smie--forward-token-when
               'yara-smie--looking-at-rule-tags-begin
@@ -165,7 +165,7 @@ For ARG detail, see `comment-dwim'."
               'yara-smie--looking-at-stmt-end
               'append ";")
              (yara-smie--backward-token-when
-              'yara-smie--looking-at-rule-decl-end
+              'yara-smie--looking-at-rule-tags-end
               'append "#:")
              (yara-smie--backward-token-when
               'yara-smie--looking-at-rule-tags-begin
@@ -262,15 +262,13 @@ For ARG detail, see `comment-dwim'."
 (defun yara-smie--looking-at-rule-decl-begin ()
   (and (looking-back "\\_<rule" (- (point) 5))))
 
-(defun yara-smie--looking-at-rule-decl-end ()
+(defun yara-smie--looking-at-rule-tags-end ()
   (and (looking-back "[[:alnum:]_]" (- (point) 1))
        (save-excursion
          (forward-comment (point-max))
-         (looking-at-p "{"))
-       (or (yara-smie--looking-at-rule-id-end)
-           (save-excursion
-             (yara-smie--skip-tags-backward)
-             (yara-smie--looking-at-rule-tags-begin t)))))
+         (and (looking-at-p "{")
+              (progn (yara-smie--skip-tags-backward)
+                     (yara-smie--looking-at-rule-tags-begin t))))))
 
 (defun yara-smie--looking-at-rule-tags-begin (&optional is-forward)
   (and (if is-forward
