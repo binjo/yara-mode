@@ -216,9 +216,9 @@ For ARG detail, see `comment-dwim'."
           "<" ">=" ">" "<=" "==" "!=")))
 
 (defconst yara-smie--re-literal-operator
-  (rx (or "and" "or" "not" "at" "in" "of"
+  (rx (or "and" "or" "not" "none" "at" "in" "of"
           "contains" "icontains" "startswith" "istartswith"
-          "endswith" "iendswith" "matches")))
+          "endswith" "iendswith" "matches" "iequals" "defined")))
 
 (defconst yara-smie--assoc-left-operator
   (rx (or (or "{" "(" "," ":")
@@ -309,15 +309,16 @@ For ARG detail, see `comment-dwim'."
        '("all" "and" "any" "ascii" "at" "base64" "base64wide" "contains" "icontains"
          "entrypoint" "false" "filesize" "fullword" "for" "global" "in"
          "import" "include"
-         "matches" "nocase" "not" "or" "of"
+         "matches" "nocase" "not" "none" "or" "of"
          "private" "rule" "them" "true"
          "wide" "xor"
-         "startswith" "istartswith" "endswith" "iendswith")
+         "startswith" "istartswith" "endswith" "iendswith" "iequals" "defined")
        'symbols)
      . font-lock-keyword-face)
     (,(regexp-opt
        '("int8" "int16" "int32" "int8be" "int16be" "int32be"
-         "uint8" "uint16" "uint32" "uint8be" "uint16be" "uint32be")
+         "uint8" "uint16" "uint32" "uint8be" "uint16be" "uint32be"
+         "math.abs" "math.count" "math.percentage" "math.mode")
        'symbols)
      . font-lock-function-name-face))
   "Keywords to highlight in yara-mode.")
