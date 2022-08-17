@@ -5,3 +5,21 @@
 yara mode for GNU Emacs to edit yara related files.
 
 (require 'yara-mode)
+
+** How to use YARA Language Server?
+
+- install the `yls` from https://github.com/avast/yls
+  `pip install -U yls-yara`
+- set up a custom language server in the `init.el`
+#+begin_src elisp
+(with-eval-after-load 'lsp-mode
+  (add-to-list 'lsp-language-id-configuration
+    '(yara-mode . "yara"))
+
+  (lsp-register-client
+    (make-lsp-client :new-connection (lsp-stdio-connection "yls")
+                     :activation-fn (lsp-activate-on "yara")
+                     :server-id 'yls)))
+#+end_src
+
+[[file:yara-mode-yls.png][YLS in GNU Emacs]]
