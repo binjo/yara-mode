@@ -22,4 +22,6 @@ yara mode for GNU Emacs to edit yara related files.
                      :server-id 'yls)))
 #+end_src
 
-[[file:yara-mode-yls.png][YLS in GNU Emacs]]
+#+name: YLS in GNU Emacs
+#+attr_org: :height 800 :width 600
+[[./yara-mode-yls.png]]
