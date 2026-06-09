@@ -291,7 +291,7 @@ For ARG detail, see `comment-dwim'."
   (backward-char))
 
 (defvar yara-font-lock-keywords
-  `(("^\\_<rule[\s\t]+\\([^\\$\s\t].*\\)\\_>"
+  `(("^[ \t]*\\(?:\\(?:private\\|global\\)[ \t]+\\)*rule[ \t]+\\([A-Za-z_][A-Za-z0-9_]*\\)"
      . (1 font-lock-function-name-face))
     ("^[\s\t]+\\([^\\$\s\t].*?\\)[\s\t]*=[\s\t]*"
      . (1 font-lock-constant-face))
@@ -338,6 +338,10 @@ For ARG detail, see `comment-dwim'."
               :forward-token #'yara-smie-forward-token
               :backward-token #'yara-smie-backward-token)
   (setq font-lock-defaults '(yara-font-lock-keywords nil t))
+  (setq-local outline-regexp "^[ \t]*\\(?:\\(?:private\\|global\\)[ \t]+\\)*rule\\_>")
+  (setq-local outline-level (lambda () 1))
+  (setq-local imenu-generic-expression
+              '(("Rules" "^[ \t]*\\(?:\\(?:private\\|global\\)[ \t]+\\)*rule[ \t]+\\([A-Za-z_][A-Za-z0-9_]*\\)" 1)))
   (setq tab-width 4))
 
 (provide 'yara-mode)
