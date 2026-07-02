@@ -360,6 +360,11 @@ For ARG detail, see `comment-dwim'."
   (setq-local indent-tabs-mode nil)
   (setq tab-width 4))
 
+;;;###autoload
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs '(yara-mode . ("yr-ls"))))
+
 (provide 'yara-mode)
 
 ;;; yara-mode.el ends here
+
